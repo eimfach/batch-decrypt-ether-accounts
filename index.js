@@ -19,7 +19,7 @@ const initalizationData = (function (api, config) {
 setProcessEventListeners(process)
 
 const promisePrivateKeyPointers = new Promise(function (resolve, reject) {
-  fs.readdir(etherPath + '/keystore', 'utf-8', (err, files) => {
+  fs.readdir(config.etherpath + '/keystore', 'utf-8', (err, files) => {
     if (err) {
       reject(err)
     } else {

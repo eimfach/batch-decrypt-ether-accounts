@@ -9,7 +9,9 @@ const config = (function (process, JSON, homedir) {
     backup: 0,
     continue: 1,
     limit: 10,
-    pwfile: `${homedir}/.ethereum-accounts-batch-decrypt-passwords.json`
+    pwfile: `${homedir}/.ethereum-accounts-batch-decrypt-passwords.json`,
+    etherpath: `${homedir}/.ethereum`,
+    showfalsy: 0
   }
 
   return {
@@ -84,10 +86,10 @@ const api = (function (fs, os, {pwfile}) {
 
 function parseArgs (argv) {
   let parsedProperties = argv.map(
-    (s) => {
-      let a = s.split('=')
+    (param) => {
+      let [key, value] = param.split('=')
       return {
-        [a[0]]: a[1]
+        [key]: value
       }
     }
   )
