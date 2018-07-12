@@ -11,7 +11,10 @@ const config = (function (process, JSON, homedir) {
     limit: 10,
     pwfile: `${homedir}/.ethereum-accounts-batch-decrypt-passwords.json`,
     etherpath: `${homedir}/.ethereum`,
-    showfalsy: 0
+    showfalsy: 0,
+    showbalance: 0,
+    apikey: '',
+    listen: 0
   }
 
   return {

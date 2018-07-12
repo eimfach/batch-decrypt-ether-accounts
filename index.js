@@ -1,16 +1,14 @@
 const fs = require('fs')
 const {api, config} = require('./lib')
+const balances = require('./balances')
 // TODO: add tests, use tape.js
 
 const childProcess = require('child_process')
 const start = Date.now()
 
-let processExitCode = 0
-
-const etherPath = '/Volumes/ocz-vertex2/Ethereum'
 const threadCount = 4
-
 const subProcessMap = new Map()
+let processExitCode = 0
 
 const initalizationData = (function (api, config) {
   return api.init({continue: config.continue})
@@ -23,7 +21,13 @@ const promisePrivateKeyPointers = new Promise(function (resolve, reject) {
     if (err) {
       reject(err)
     } else {
-      let accountPubKeys = new Set(files.map((file) => { return file.split('--').reverse()[0] }))
+      let accountPubKeys = new Set(
+        files.map(
+          (file) => {
+            return `${file.split('--').reverse()[0]}`
+          }
+        )
+      )
 
       if (initalizationData.verifiedAccounts.length) {
         console.log(`Found ${initalizationData.verifiedAccounts.length} validated accounts, continue processing at last state ...`)
@@ -44,6 +48,17 @@ promisePrivateKeyPointers
     const batchItemPromises = []
     const batchItemsList = []
     let currentProcessCount = 0
+
+    if (config.showbalance) {
+      try {
+        const result = await balances.getBalance(config.apikey, accounts)
+        console.log('balances', result)
+      } catch (e) {
+        console.log(e)
+      } finally {
+        process.exit(0)
+      }
+    }
 
     console.log('preparing batch list for all accounts, this may take a moment ...')
     for (let account of accounts) {
@@ -108,7 +123,7 @@ promisePrivateKeyPointers
   })
   .catch(err => {
     processExitCode = 1
-
+    // TODO: why bind listener here?
     process.on('exit', (code, signal) => {
       console.log('----------------------------------\n\n\n\n\n[FAILURE] \n\n\nSome accounts were invalid\n\n\n[FAILURE]\n\n\n\n\n----------------------------------')
       console.log('Message: ', err)
@@ -159,7 +174,7 @@ function createDelegationPromise (account) {
     const getFailMsg = ({errMsg, account}) => '[FAILURE ' + account.slice(0, 8) + '...]\t\t' + errMsg
     appendListenersToSubProcess(subprocess, getSuccessMsg, getFailMsg, reject, resolve)
 
-    subprocess.send({account, etherPath, passwords: initalizationData.passwords})
+    subprocess.send({account, etherpath: config.etherpath, passwords: initalizationData.passwords})
   })
   return delegation
 }

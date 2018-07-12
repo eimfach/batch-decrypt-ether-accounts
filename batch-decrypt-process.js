@@ -1,9 +1,9 @@
 const keyth = require('keythereum')
 const querystring = require('querystring')
 
-process.on('message', async function ({account, etherPath, passwords}) {
+process.on('message', async function ({account, etherpath, passwords}) {
   try {
-    let {privateKey, pw} = await verifyPrivateKey(account, etherPath, passwords)
+    let {privateKey, pw} = await batchDecryptPrivateKey(etherpath, account, passwords)
 
     process.send({success: true, privateKey, account, pw})
   } catch (e) {
@@ -13,7 +13,7 @@ process.on('message', async function ({account, etherPath, passwords}) {
   process.exit(0)
 })
 
-async function verifyPrivateKey (account, path, passwords) {
+async function batchDecryptPrivateKey (path, account, passwords) {
   console.log('[pid:' + process.pid + ' pub: ' + account + '] verifiyingPrivateKey()')
   const keyobj = keyth.importFromFile(account, path)
 
