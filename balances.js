@@ -8,7 +8,7 @@ const requestConfig = {
   action: 'balancemulti',
   address: [],
   tag: 'latest',
-  apikey: ''
+  apiKey: ''
 }
 
 module.exports = Object.freeze({
@@ -16,60 +16,59 @@ module.exports = Object.freeze({
 })
 
 async function getBalance ({url, apiKey, addresses}) {
+  for (let address of addresses) {
+    if (!mosayk.number.isValidHex(address)) {
+      throw new Error('Invalid hex value given: ' + address)
+    }
+  }
   addresses = addresses.map((addr) => `0x${addr}`)
-  const promiseApiRequests = new Promise(async function (resolve, reject) {
-    if (addresses.length > 20) {
-      let currentRequestCount = 0
-      let result = []
-      let requests = []
 
-      for (let addressesSeq of mosayk.sequentialIterator(addresses, 20)) {
-        if (currentRequestCount === 5) {
-          await mosayk.timeout(5150)
-        }
-        currentRequestCount += 1
-        const request =
+  if (addresses.length > 20) {
+    let currentRequestCount = 0
+    let result = []
+    let requests = []
+
+    for (let addressesSeq of mosayk.iterable.sequence(addresses, 20)) {
+      if (currentRequestCount === 5) {
+        await mosayk.promise.timeout(5150)
+      }
+      currentRequestCount += 1
+      const request =
           requestBalance({url, requestConfig, apiKey, address: addressesSeq})
             .then((data) => {
-              result.push(data)
               currentRequestCount -= 1
             })
-            .catch((err) => {})
+            .catch(err => err)
 
-        requests.push(request)
-      }
-      try {
-        await mosayk.allFullfilled(requests) // TODO: List is empty at this point
-      } catch (e) {
-
-      } finally {
-        resolve(result)
-      }
-    } else {
-      try {
-        let data = await requestBalance({url, requestConfig, apiKey, address: addresses})
-        resolve(data)
-      } catch (e) {
-        reject(e)
-      }
+      requests.push(request)
     }
-  })
+    result = [...(await mosayk.promise.allFullfilled(requests))]
+  } else {
+    result = await requestBalance({url, requestConfig, apiKey, address: addresses})
+  }
 
-  return promiseApiRequests
+  return result
 }
 
 function requestBalance ({url = apiUrl, requestConfig, apiKey, address}) {
   let query = querystring.stringify(Object.assign({}, requestConfig, {apiKey, address: address.join(',')}))
   const unescapedDomainUrl = querystring.unescape(`${url}?${query}`)
+
   const request = new Promise(function (resolve, reject) {
-    http.get(unescapedDomainUrl, (res) => {
-      res.setEncoding('utf-8')
+    http.get(unescapedDomainUrl, (response) => {
       let rawData = ''
-      res.on('data', (chunk) => { rawData += chunk })
-      res.on('end', () => {
-        resolve(JSON.parse(rawData))
+
+      response.setEncoding('utf-8')
+      response.on('data', (chunk) => { rawData += chunk })
+      response.on('end', () => {
+        const contentType = response.headers['content-type']
+        if (contentType !== 'application/json; charset=utf-8') {
+          reject(new Error('Invalid Content-Type: ' + contentType + ' on: ' + unescapedDomainUrl))
+        } else {
+          resolve(JSON.parse(rawData))
+        }
       })
-      res.on('error', (err) => { reject(err) })
+      response.on('error', reject)
     })
   })
 

@@ -12,26 +12,40 @@ module.exports = (function () {
     return info
   }
 
-  function teardown () {
-    serverHandle.stop()
+  async function teardown () {
+    return serverHandle.stop()
   }
 })()
 
 function stage () {
   const app = express()
+  let host = 'http://127.0.0.1'
   let instance
   let requestCount = 0
   let startTime
   let endTime
+  let requestDataLog = []
 
-  app.set('port', (process.env.PORT || 5000))
+  app.set('port', 4987)
 
-  app.get('/3', function (request, response) {
+  app.get('/balance', function (request, response) {
     if (requestCount === 0) {
       startTime = new Date()
     }
-    requestCount += 1
-    response.send('[{}, {}, {}]')
+    const reqUrl = new URL(request.url, host)
+
+    const receivedAddresses = reqUrl.searchParams.get('address')
+    if (receivedAddresses != null) {
+      const addressList = receivedAddresses.split(',')
+      requestDataLog.push(addressList)
+
+      requestCount += 1
+      response.send(addressList.map(
+        (address) => ({ account: address })
+      ))
+    } else {
+      response.writeHead(401)
+    }
   })
 
   return {
@@ -40,8 +54,9 @@ function stage () {
 
   function start () {
     const promiseStart = new Promise(function (resolve, reject) {
+      const baseUrl = host + ':' + app.get('port')
       instance = app.listen(app.get('port'), function () {
-        resolve({url: 'http://localhost:' + app.get('port')})
+        resolve({url: baseUrl})
       })
     })
 
@@ -49,8 +64,18 @@ function stage () {
   }
 
   function stop () {
-    instance.close()
-    endTime = new Date()
-    return {time: endTime - startTime, requests: requestCount}
+    const closeConnection = new Promise(function (resolve, reject) {
+      try {
+        endTime = new Date()
+        instance.on('close', () => {
+          resolve({time: endTime - startTime, requests: requestCount, requestDataLog})
+        })
+        instance.close()
+      } catch (e) {
+        reject('error closing')
+      }
+    })
+
+    return closeConnection
   }
 }
