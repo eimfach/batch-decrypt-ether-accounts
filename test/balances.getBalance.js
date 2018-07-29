@@ -34,30 +34,35 @@ test('balances.getBalance() expects exception if first given number is no valid 
   }
 )
 
-test('balances.getBalance() has a treshold of 1 request/sec',
+test('balances.getBalance() has a treshold of 1 request/sec (odd)',
   async (assert) => {
-    const {url} = await setup()
-    const addresses = Array(201)
-    addresses.fill('123')
-    try {
-      await balances.getBalance({url: `${url}/balance`, apiKey: 'dummy', addresses})
-    } catch (e) {
-      await teardown()
-      reject(e)
-    }
-
-    const {time, requests} = await teardown()
-    const dte = new Date(time)
-    const secondsPassed = dte.getSeconds()
-    let ratio
-    if (secondsPassed > 0) {
-      ratio = requests / secondsPassed
-    }
-
     const expected = 1.0
-    const actual = ratio
-
+    const actual = await requestTreshold(201)
     assert.equal(actual, expected)
   }
-
 )
+
+test('balances.getBalance() has a treshold of 1 request/sec (even)',
+  async (assert) => {
+    const expected = 1.0
+    const actual = await requestTreshold(200)
+    assert.equal(actual, expected)
+  }
+)
+
+async function requestTreshold (items) {
+  const {url} = await setup()
+  const addresses = Array(items) // odd
+  addresses.fill('123')
+  await balances.getBalance({url: `${url}/balance`, apiKey: 'dummy', addresses})
+
+  const {time, requests, requestDataLog} = await teardown()
+  const dte = new Date(time)
+  const secondsPassed = dte.getSeconds()
+  let ratio = 0
+  if (secondsPassed > 0) {
+    ratio = requests / secondsPassed
+  }
+
+  return ratio
+}

@@ -25,20 +25,26 @@ async function getBalance ({url, apiKey, addresses}) {
 
   if (addresses.length > 20) {
     let currentRequestCount = 0
+    let abortCounter = 0
     let result = []
     let requests = []
 
     for (let addressesSeq of mosayk.iterable.sequence(addresses, 20)) {
-      if (currentRequestCount === 5) {
+      while (currentRequestCount >= 4) {
+        abortCounter += 1
+        if (abortCounter === 12) {
+          throw new Error('No Response')
+        }
         await mosayk.promise.timeout(5150)
       }
-      currentRequestCount += 1
+      ++currentRequestCount
+
       const request =
           requestBalance({url, requestConfig, apiKey, address: addressesSeq})
-            .then((data) => {
-              currentRequestCount -= 1
-            })
             .catch(err => err)
+            .finally(() => {
+              --currentRequestCount
+            })
 
       requests.push(request)
     }

@@ -64,9 +64,9 @@ function stage () {
   }
 
   function stop () {
+    endTime = new Date()
     const closeConnection = new Promise(function (resolve, reject) {
       try {
-        endTime = new Date()
         instance.on('close', () => {
           resolve({time: endTime - startTime, requests: requestCount, requestDataLog})
         })
