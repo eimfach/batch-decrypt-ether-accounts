@@ -26,8 +26,9 @@ async function getBalance ({url, apiKey, addresses}) {
   if (addresses.length > 20) {
     let result = []
     let requests = []
-
-    for (let addressesSeq of mosayk.iterable.sequence(addresses, 20)) {
+    const addressSequences = mosayk.iterable.sequence(addresses, 20)
+    for (let addressesSeq of addressSequences) {
+      // TODO: timeout is not enough for leaping request if odd address count (11 requests for 10 seconds time - logical error)
       if ((requests.length % 5) === 0) {
         await mosayk.promise.timeout(5000)
       }
